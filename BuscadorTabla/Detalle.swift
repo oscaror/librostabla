@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CoreData
 
 class Detalle: UIViewController {
 
@@ -17,95 +18,124 @@ class Detalle: UIViewController {
     @IBOutlet weak var portadaDetalle: UIImageView!
     
     var isbn : String = ""
+    var contexto : NSManagedObjectContext? = nil
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.navigationItem.title = "Detalle"
         
-        let cadenaIsbn = "ISBN: " + isbn
-        self.isbnDetalle.text = cadenaIsbn
-
-        let cadenaBusqueda = isbn
+        self.contexto = (UIApplication.sharedApplication().delegate as! AppDelegate).managedObjectContext
         
-        var autores : [String] = []
-        var titulo2 = ""
-        var imgUrl = ""
-        let bloque2 : String = "api/books?jscmd=data&format=json&bibkeys=ISBN:"
+        let libroEntidad = NSEntityDescription.entityForName("Libro", inManagedObjectContext: self.contexto!)
+        let peticion = libroEntidad?.managedObjectModel.fetchRequestFromTemplateWithName("petLibro", substitutionVariables: ["isbn": isbn])
         
-        
-        let urls = "http://openlibrary.org/" //se crea el string con el url del servidor
-        let urls2 = urls+bloque2+cadenaBusqueda
-        let url = NSURL(string: urls2) //se convierte en una URL
-        //print (url)
-        
-        let datos : NSData? =  NSData (contentsOfURL: url!) //usando NSData, solicitamos una peticion al servidor, se espera aqui a que el servidor conteste y el resultado lo asociamos a esa variable
-        if datos == nil{
-            showSimpleAlert()
-            self.tituloDetalle.text = "Error de conexión - Intenta de nuevo"
-            tituloDetalle.text = ""
-            autorDetalle.text = ""
-            portadaDetalle.image = UIImage (named: "blank")
-            
-            
-        }else {
-            let texto = NSString(data:datos!, encoding:NSUTF8StringEncoding)
-            if texto == "{}"{
-                showSimpleAlert2()
-                tituloDetalle.text! = ""
-                autorDetalle.text! = ""
-                portadaDetalle.image = UIImage (named: "blank")
+        do{
+            let libroEntidad2 = try self.contexto?.executeFetchRequest(peticion!)
+            for libroResultadoEntidad in libroEntidad2!{
+                let titulo = libroResultadoEntidad.valueForKey("nombre") as! String
+                let autor = libroResultadoEntidad.valueForKey("autores") as! String
+                let portada : UIImage? = UIImage(data: libroResultadoEntidad.valueForKey("portada") as! NSData)
                 
-            }else {
-                do {
-                    let json = try NSJSONSerialization.JSONObjectWithData(datos!, options: NSJSONReadingOptions.MutableLeaves)
-                    let dico1 = json as! NSDictionary
-                    if let dico2 = dico1["ISBN:"+cadenaBusqueda] as? NSDictionary{
-                        titulo2 = dico2["title"] as! NSString as String
-                        
-                        
-                        if let dico3 = dico2["authors"] as? NSArray{
-                            for autor in dico3{
-                                //self.autor.text = dico3[0]["name"] as! NSString as String
-                                autores.append(autor["name"] as! NSString as String)
-                            }
-                            
-                        }
-                        if let dico4 = dico2["cover"] as? NSDictionary{
-                            imgUrl = dico4["medium"] as! NSString as String
-                            
-                        }
-                        
-                    }
-                    
-                }
-                    
-                catch _ {
-                    
-                }
-                
-                self.tituloDetalle.text = titulo2
-                tituloDetalle.numberOfLines = 0
-                tituloDetalle.lineBreakMode = NSLineBreakMode.ByWordWrapping
-                tituloDetalle.sizeToFit()
-
-                self.autorDetalle.text = autores.joinWithSeparator(",")
-                autorDetalle.numberOfLines = 0
-                autorDetalle.lineBreakMode = NSLineBreakMode.ByWordWrapping
-                autorDetalle.sizeToFit()
-
-                if imgUrl != ""{
-                    let url = NSURL(string: imgUrl)
-                    let data = NSData(contentsOfURL: url!)
-                    self.portadaDetalle.image = UIImage(data: data!)
-                }
-                else{
-                    self.portadaDetalle.image = UIImage(named: "blank")
-                }
-                
-                
-                
+                tituloDetalle.text = titulo
+                isbnDetalle.text = isbn
+                autorDetalle.text = autor
+                portadaDetalle.image = portada
+//                if  portada != nil {
+//                    portadaDetalle.image = portada
+//                }else {
+//                    portadaDetalle.image = UIImage(named: "blank")
+//                }
             }
         }
+        catch {
+            
+        }
+        
+        
+//        let cadenaIsbn = "ISBN: " + isbn
+//        self.isbnDetalle.text = cadenaIsbn
+//
+//        let cadenaBusqueda = isbn
+//        
+//        var autores : [String] = []
+//        var titulo2 = ""
+//        var imgUrl = ""
+//        let bloque2 : String = "api/books?jscmd=data&format=json&bibkeys=ISBN:"
+//        
+//        
+//        let urls = "http://openlibrary.org/" //se crea el string con el url del servidor
+//        let urls2 = urls+bloque2+cadenaBusqueda
+//        let url = NSURL(string: urls2) //se convierte en una URL
+//        //print (url)
+//        
+//        let datos : NSData? =  NSData (contentsOfURL: url!) //usando NSData, solicitamos una peticion al servidor, se espera aqui a que el servidor conteste y el resultado lo asociamos a esa variable
+//        if datos == nil{
+//            showSimpleAlert()
+//            self.tituloDetalle.text = "Error de conexión - Intenta de nuevo"
+//            tituloDetalle.text = ""
+//            autorDetalle.text = ""
+//            portadaDetalle.image = UIImage (named: "blank")
+//            
+//            
+//        }else {
+//            let texto = NSString(data:datos!, encoding:NSUTF8StringEncoding)
+//            if texto == "{}"{
+//                showSimpleAlert2()
+//                tituloDetalle.text! = ""
+//                autorDetalle.text! = ""
+//                portadaDetalle.image = UIImage (named: "blank")
+//                
+//            }else {
+//                do {
+//                    let json = try NSJSONSerialization.JSONObjectWithData(datos!, options: NSJSONReadingOptions.MutableLeaves)
+//                    let dico1 = json as! NSDictionary
+//                    if let dico2 = dico1["ISBN:"+cadenaBusqueda] as? NSDictionary{
+//                        titulo2 = dico2["title"] as! NSString as String
+//                        
+//                        
+//                        if let dico3 = dico2["authors"] as? NSArray{
+//                            for autor in dico3{
+//                                //self.autor.text = dico3[0]["name"] as! NSString as String
+//                                autores.append(autor["name"] as! NSString as String)
+//                            }
+//                            
+//                        }
+//                        if let dico4 = dico2["cover"] as? NSDictionary{
+//                            imgUrl = dico4["medium"] as! NSString as String
+//                            
+//                        }
+//                        
+//                    }
+//                    
+//                }
+//                    
+//                catch _ {
+//                    
+//                }
+//                
+//                self.tituloDetalle.text = titulo2
+//                tituloDetalle.numberOfLines = 0
+//                tituloDetalle.lineBreakMode = NSLineBreakMode.ByWordWrapping
+//                tituloDetalle.sizeToFit()
+//
+//                self.autorDetalle.text = autores.joinWithSeparator(",")
+//                autorDetalle.numberOfLines = 0
+//                autorDetalle.lineBreakMode = NSLineBreakMode.ByWordWrapping
+//                autorDetalle.sizeToFit()
+//
+//                if imgUrl != ""{
+//                    let url = NSURL(string: imgUrl)
+//                    let data = NSData(contentsOfURL: url!)
+//                    self.portadaDetalle.image = UIImage(data: data!)
+//                }
+//                else{
+//                    self.portadaDetalle.image = UIImage(named: "blank")
+//                }
+//                
+//                
+//                
+//            }
+//        }
         // Do any additional setup after loading the view.
     }
 
@@ -114,43 +144,7 @@ class Detalle: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    func showSimpleAlert() {
-        let title = NSLocalizedString("Error", comment: "")
-        let message = NSLocalizedString("No hay conexión a internet. Reintente más tarde", comment: "")
-        let cancelButtonTitle = NSLocalizedString("OK", comment: "")
-        
-        let alertController = UIAlertController(title: title, message: message, preferredStyle: .Alert)
-        
-        // Create the action.
-        let cancelAction = UIAlertAction(title: cancelButtonTitle, style: .Cancel) { action in
-            NSLog("The simple alert's cancel action occured.")
-        }
-        
-        // Add the action.
-        alertController.addAction(cancelAction)
-        
-        presentViewController(alertController, animated: true, completion: nil)
-    }
-    
-    func showSimpleAlert2() {
-        let title = NSLocalizedString("Error", comment: "")
-        let message = NSLocalizedString("Libro no encontrado - Compruebe ISBN", comment: "")
-        let cancelButtonTitle = NSLocalizedString("OK", comment: "")
-        
-        let alertController = UIAlertController(title: title, message: message, preferredStyle: .Alert)
-        
-        // Create the action.
-        let cancelAction = UIAlertAction(title: cancelButtonTitle, style: .Cancel) { action in
-            NSLog("The simple alert's cancel action occured.")
-        }
-        
-        // Add the action.
-        alertController.addAction(cancelAction)
-        
-        presentViewController(alertController, animated: true, completion: nil)
-    }
-    
-
+  
     /*
     // MARK: - Navigation
 

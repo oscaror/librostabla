@@ -5,15 +5,23 @@
 //  Created by Oscar Ortega on 31/05/16.
 //  Copyright © 2016 Ozzcorp. All rights reserved.
 //
+//Modificación Final
 
 import UIKit
-
+import CoreData
 
 class Maestro: UITableViewController {
     
-    var titulo : Array<Array<String>> = Array<Array<String>>()
+    var isbn : String = ""
+    var titulo : String = ""
+    var autores : String = ""
+    var portada : UIImage? = nil
+    var contexto : NSManagedObjectContext? = nil
     
+    var arreglo : Array<Array<String>> = Array<Array<String>>()
 
+    //Array<Array<String>> = Array<Array<String>>()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -23,7 +31,21 @@ class Maestro: UITableViewController {
         
         self.navigationItem.rightBarButtonItem = addButton
         
+        self.contexto = (UIApplication.sharedApplication().delegate as! AppDelegate).managedObjectContext
         
+        let libroEntidad = NSEntityDescription.entityForName("Libro", inManagedObjectContext: self.contexto!)
+        let peticion = libroEntidad?.managedObjectModel.fetchRequestTemplateForName("petLibros")
+        do {
+            let librosEntidad = try self.contexto?.executeFetchRequest(peticion!)
+            for libroEntidad2 in librosEntidad! {
+                let tituloTemp = libroEntidad2.valueForKey("nombre") as! String
+                let isbnTemp = libroEntidad2.valueForKey("isbn") as! String
+                arreglo.append([tituloTemp, isbnTemp])
+            }
+        }
+        catch{
+            
+        }
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
@@ -45,20 +67,51 @@ class Maestro: UITableViewController {
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return titulo.count
+        return arreglo.count
     }
     func addBook (){
         performSegueWithIdentifier("agregar", sender: self)
     }
     
     
+    
     @IBAction func saveBook (segue: UIStoryboardSegue){
         //ISBN.append(contenedor)
         //contenedor.append()
         if segue.identifier == "exit"{
-            let indexPath = NSIndexPath(forRow: titulo.count-1, inSection: 0)
-            tableView.insertRowsAtIndexPaths([indexPath], withRowAnimation: .Automatic)
-            tableView.reloadData()
+            let nuevoLibroEntidad = NSEntityDescription.insertNewObjectForEntityForName("Libro", inManagedObjectContext: self.contexto!)
+            nuevoLibroEntidad.setValue(isbn, forKey: "isbn")
+            nuevoLibroEntidad.setValue(titulo, forKey: "nombre")
+            nuevoLibroEntidad.setValue(autores, forKey: "autores")
+            nuevoLibroEntidad.setValue(UIImagePNGRepresentation(portada!), forKey: "portada")
+            
+            let libroEntidad = NSEntityDescription.entityForName("Libro", inManagedObjectContext: self.contexto!)
+            let peticion = libroEntidad?.managedObjectModel.fetchRequestTemplateForName("petLibros")
+            //nuevoLibroEntidad.setValue(portada, forKey: "portada")
+            
+            do{
+                try self.contexto?.save()
+                arreglo.removeAll()
+                let librosEntidad = try self.contexto?.executeFetchRequest(peticion!)
+                for libroEntidad2 in librosEntidad! {
+                    let tituloTemp = libroEntidad2.valueForKey("nombre") as! String
+                    let isbnTemp = libroEntidad2.valueForKey("isbn") as! String
+                    arreglo.append([tituloTemp, isbnTemp])
+                    tableView.reloadData()
+                }
+
+            }
+            catch {
+                print ("Error en guardado")
+            }
+            
+            
+            
+            //codifo anterior
+            //let indexPath = NSIndexPath(forRow: arreglo.count-1, inSection: 0)
+            //tableView.insertRowsAtIndexPaths([indexPath], withRowAnimation: .Automatic)
+            //tableView.reloadData()
+            
                 //print (titulo, " hola")
         }
     }
@@ -68,7 +121,7 @@ class Maestro: UITableViewController {
         let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath)
 
         // Configure the cell...
-        cell.textLabel?.text = self.titulo[indexPath.row][0]
+        cell.textLabel?.text = self.arreglo[indexPath.row][0]
 
         return cell
     }
@@ -147,7 +200,8 @@ class Maestro: UITableViewController {
         if segue.identifier == "detalle"{
             let dt = segue.destinationViewController as! Detalle
             let ip = self.tableView.indexPathForSelectedRow
-            dt.isbn = self.titulo[ip!.row][1]
+            dt.isbn = self.arreglo[ip!.row][1]
+            print(dt.isbn)
             //dt.tituloDetalle?.text = self.titulo[ip!.row][0]
         }
         else {

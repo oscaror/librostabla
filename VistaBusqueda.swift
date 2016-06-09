@@ -7,7 +7,7 @@
 //
 
 import UIKit
-
+import CoreData
 
 class VistaBusqueda: UIViewController, UITextFieldDelegate {
 
@@ -17,6 +17,7 @@ class VistaBusqueda: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var portada: UIImageView!
     
     var cadenaBusqueda = ""
+    var contexto : NSManagedObjectContext? = nil
     
     
     override func viewDidLoad() {
@@ -24,6 +25,8 @@ class VistaBusqueda: UIViewController, UITextFieldDelegate {
 
         self.buscador.delegate = self
         habilitarBoton()
+        
+        self.contexto = (UIApplication.sharedApplication().delegate as! AppDelegate).managedObjectContext
         
         // Do any additional setup after loading the view.
     }
@@ -71,14 +74,31 @@ class VistaBusqueda: UIViewController, UITextFieldDelegate {
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "exit" {
-                let mtv = segue.destinationViewController as! Maestro
-                mtv.titulo.append([self.titulo.text!, self.buscador.text!])
-            }
+            let mtv = segue.destinationViewController as! Maestro
+            mtv.titulo = self.titulo.text!
+            mtv.autores = self.autor.text!
+            mtv.portada = self.portada.image
+            mtv.isbn = self.cadenaBusqueda
+                //mtv.titulo.append([self.titulo.text!, self.buscador.text!])
+        }
     }
    
     func buscar () {
         //el metodo es sincrono
         cadenaBusqueda = buscador.text!
+        let libroEntidad = NSEntityDescription.entityForName("Libro", inManagedObjectContext: self.contexto!)
+        let peticion = libroEntidad?.managedObjectModel.fetchRequestFromTemplateWithName("petLibro", substitutionVariables: ["isbn": buscador.text!])
+        do{
+            let libroEntidad2 = try self.contexto?.executeFetchRequest(peticion!)
+                if (libroEntidad2?.count > 0) {
+                    buscador.text = nil
+                    showAlertDup()
+                    return
+                }
+        }
+        catch{
+            
+        }
         var autores : [String] = []
         var titulo2 = ""
         var imgUrl = ""
@@ -154,7 +174,7 @@ class VistaBusqueda: UIViewController, UITextFieldDelegate {
                     self.portada.image = UIImage(data: data!)
                 }
                 else{
-                    self.portada.image = UIImage(named: "blank")
+                    self.portada.image = UIImage(named: "not found")
                 }
                 
                     
@@ -199,6 +219,25 @@ class VistaBusqueda: UIViewController, UITextFieldDelegate {
         
         presentViewController(alertController, animated: true, completion: nil)
     }
+    
+    func showAlertDup() {
+        let title = NSLocalizedString("Atención", comment: "")
+        let message = NSLocalizedString("Este libro ya esta registrado - Intente una nueva busqueda", comment: "")
+        let cancelButtonTitle = NSLocalizedString("OK", comment: "")
+        
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .Alert)
+        
+        // Create the action.
+        let cancelAction = UIAlertAction(title: cancelButtonTitle, style: .Cancel) { action in
+            NSLog("The simple alert's cancel action occured.")
+        }
+        
+        // Add the action.
+        alertController.addAction(cancelAction)
+        
+        presentViewController(alertController, animated: true, completion: nil)
+    }
+
     
     func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool {
         if (string == " ") {
